@@ -1,0 +1,35 @@
+# Secrets — never commit
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.pfx
+**/secrets/
+
+# Python and environment
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+
+# AMX local data
+*.db
+*.db-wal
+*.db-shm
+.amx/
+
+# Ignore everything under docs except the public docs
+docs/*
+!docs/WORKING.md
+!docs/DEV.md
+!docs/llm_guide.md
+
+# Root documentation and examples
+/[Gg]*.md
+/*me/
+/.*.json

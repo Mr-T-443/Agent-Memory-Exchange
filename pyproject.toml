@@ -1,0 +1,46 @@
+[project]
+name = "amx"
+dynamic = ["version"]
+description = "Agent Memory Exchange - cross-client, local-first LLM memory layer over MCP"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [{ name = "AMX contributors" }]
+keywords = ["mcp", "memory", "llm", "context", "agents"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Software Development :: Libraries",
+]
+dependencies = [
+    "mcp>=1.0.0",
+    "pydantic>=2.0",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.23"]
+tokenizer = ["tiktoken>=0.5"]
+
+[project.urls]
+Documentation = "https://github.com/Mr-T-443/Agent-Memory-Exchange/blob/main/docs/WORKING.md"
+Source = "https://github.com/Mr-T-443/Agent-Memory-Exchange"
+
+[project.scripts]
+amx = "amx.cli:main"
+amx-server = "amx.mcp.server:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.dynamic]
+version = { attr = "amx.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["amx*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"

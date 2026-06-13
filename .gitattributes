@@ -1,0 +1,4 @@
+# Shell scripts must keep LF endings or `curl | sh` breaks on Unix.
+*.sh text eol=lf
+# PowerShell is fine with either; keep CRLF on Windows.
+*.ps1 text eol=crlf
