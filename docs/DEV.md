@@ -91,7 +91,7 @@ reconciliation logic stay in one place.
 | `amx/store/migrations.py` | Six versioned, additive migrations (`db_version 6`). |
 | `amx/mcp/server.py` | `create_server(cfg)` builds FastMCP with server instructions and registers tools. `main()` runs stdio. |
 | `amx/adoption.py` | Per-client onboarding (`amx_init`) + the persistent continuity instruction (`INSTRUCTION_VERSION`). |
-| `amx/cli.py` | The `amx` command: `server`, `version`, `info`, `install-mcp`, `backup`, `restore`, `enable-foundry`, `disable-foundry`, `foundry-sync`, `local-sync`, `update`, `uninstall`, `nukeit`. `update`/`uninstall` detect how AMX was installed — pipx, a dedicated `~/.amx-venv`, or plain pip — and clean up accordingly. |
+| `amx/cli.py` | The `amx` command: `server`, `version`, `info`, `search`, `install-mcp`, `backup`, `restore`, `enable-foundry`, `disable-foundry`, `foundry-sync`, `local-sync`, `update`, `uninstall`, `nukeit`. `search` runs the merged local + Foundry IQ search from the terminal. `update`/`uninstall` detect how AMX was installed — pipx, a dedicated `~/.amx-venv`, or plain pip — and clean up accordingly. |
 | `amx/clients.py` | Known MCP clients — detection, config-file paths, `install()`/`uninstall()` (surgical, only AMX's own entry), and per-client auto-approve ("trust") for `amx install-mcp`. |
 
 ---

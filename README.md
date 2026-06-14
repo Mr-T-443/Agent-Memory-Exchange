@@ -329,12 +329,15 @@ amx foundry-sync      # make the Azure index mirror local memory exactly
 amx local-sync        # restore local memory from the Azure index
 ```
 
+`amx search "query"` runs the same merged search from the terminal: it searches every local project at once and folds in Foundry IQ results when configured, ranked by relevance with a match percentage per hit. Add `--local-only` to skip Foundry IQ, or `--limit N` to cap the results.
+
 ## Useful CLI Commands
 
 You mostly use AMX through your AI assistant, but a few commands are handy:
 
 ```bash
 amx info               # version and where your memory is stored
+amx search "query"     # ranked search across your memory (local + Foundry IQ)
 amx install-mcp        # register AMX in your AI clients (GitHub Copilot, Cursor, ...)
 amx backup             # save a copy of your memory into the current directory
 amx restore <file.db>  # load a backup (shows what it overwrites, asks first)

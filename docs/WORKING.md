@@ -649,6 +649,11 @@ too). `amx foundry-sync` reconciles the index to match local memory exactly;
 `amx local-sync` restores local records *from* the index (e.g. on a new
 machine). Keys live in `~/.amx/.env`, which the server loads automatically.
 
+**Search from the terminal:** `amx search "query"` runs the same merged search
+your assistant uses — every local project at once, plus Foundry IQ when
+configured — ranked by relevance with a match percentage per hit. Use
+`--local-only` to skip Foundry IQ or `--limit N` to cap the results.
+
 ---
 
 ## 8. Good habits

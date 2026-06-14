@@ -107,6 +107,56 @@ def _info(_args) -> int:
     return 0
 
 
+# Collapse whitespace and trim a body to one short line.
+def _search_snippet(body: str, limit: int = 160) -> str:
+    body = " ".join(body.split())
+    return body if len(body) <= limit else body[:limit].rsplit(" ", 1)[0] + "..."
+
+
+def _search(args) -> int:
+    from amx.integrations import foundry_iq
+    from amx.memory.ranking import rank_records
+    from amx.store import Store
+
+    cfg = AMXConfig()
+    if not cfg.db_path.exists():
+        print(f"No database at {cfg.db_path}. Nothing to search yet.")
+        return 1
+
+    query = args.query
+    use_foundry = cfg.foundry_configured and not args.local_only
+
+    # Search every local project at once, then fold in Foundry IQ results.
+    store = Store(cfg.db_path)
+    try:
+        ranked = rank_records(store.search_records_global(query, cfg.search_limit), query, cfg)
+        hits = [(r.score, "local", r.record.project_id, r.record.title, r.record.body)
+                for r in ranked]
+    finally:
+        store.close()
+
+    if use_foundry:
+        for m in foundry_iq.search(query, cfg):
+            hits.append((m.score, "foundry_iq", "foundry", m.title, m.summary))
+
+    hits.sort(key=lambda h: -h[0])
+    hits = hits[: args.limit]
+
+    where = "local memory + Foundry IQ" if use_foundry else "local memory"
+    if not hits:
+        print(f"No matches for {query!r} in {where}.")
+        return 0
+
+    print(f"{len(hits)} match(es) for {query!r} in {where}:\n")
+    for score, source, project, title, body in hits:
+        pct = max(0.0, min(1.0, score)) * 100
+        filled = round(score * 20)
+        bar = "#" * filled + "-" * (20 - filled)
+        print(f"  [{bar}] {pct:5.1f}%  [{source:<10}] {title}")
+        print(f"  {' ':>28}{project}: {_search_snippet(body)}\n")
+    return 0
+
+
 def _update(args) -> int:
     source = args.source or DEFAULT_UPDATE_SOURCE
     before = __version__
@@ -641,6 +691,15 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("server", help="Run the AMX MCP server (stdio).").set_defaults(func=_run_server)
     sub.add_parser("version", help="Print the AMX version.").set_defaults(func=_version)
     sub.add_parser("info", help="Show database location and health.").set_defaults(func=_info)
+
+    search = sub.add_parser(
+        "search",
+        help="Search memory (local + Foundry IQ) and rank matches by relevance.",
+    )
+    search.add_argument("query", help="What to search for.")
+    search.add_argument("--limit", type=int, default=10, help="Max results to show (default 10).")
+    search.add_argument("--local-only", action="store_true", help="Skip Foundry IQ; search local memory only.")
+    search.set_defaults(func=_search)
 
     update = sub.add_parser("update", help="Upgrade AMX (preserves your data).")
     update.add_argument("--source", help="Install source (default: the AMX repo).")
