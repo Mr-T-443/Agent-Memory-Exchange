@@ -42,6 +42,14 @@ def test_stemming_matches_word_variants(store, cfg):
     assert any("search" in t.lower() for t in titles)
 
 
+def test_prefix_matches_partial_words(store, cfg):
+    ingest_record(store, "p1", RecordType.ARCHITECTURE, "Authentication module",
+                  "Handles login and session configuration.")
+    # Partial words find the fuller term, which plain stemming can't bridge.
+    assert search_memory(store, "p1", "auth", limit=5, cfg=cfg).matches
+    assert search_memory(store, "p1", "config", limit=5, cfg=cfg).matches
+
+
 def test_snippet_is_query_focused(store, cfg):
     long_body = ("Intro padding. " * 40) + "The rollback path stalls badly here. " + ("Trailing. " * 40)
     ingest_record(store, "p1", RecordType.BUG, "OTA failure", long_body)

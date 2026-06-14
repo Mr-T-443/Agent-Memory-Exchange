@@ -38,10 +38,11 @@ _INACTIVE_LIST = ", ".join(f"'{s}'" for s in sorted(INACTIVE_STATUSES))
 _ACTIVE_CLAUSE = f"AND (status IS NULL OR status NOT IN ({_INACTIVE_LIST}))"
 
 
-# Quote tokens to escape FTS5 query syntax.
+# Quote each token to escape FTS5 syntax; the trailing * enables prefix matching
+# (so "auth" finds "authentication", "config" finds "configuration").
 def _fts_query(text: str) -> str:
     tokens = _TOKEN_RE.findall(text)
-    return " OR ".join(f'"{t}"' for t in tokens)
+    return " OR ".join(f'"{t}"*' for t in tokens)
 
 
 def _row_to_record(row: sqlite3.Row) -> MemoryRecord:
