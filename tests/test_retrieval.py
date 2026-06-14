@@ -32,6 +32,16 @@ def test_search_is_deterministic(store, cfg):
     assert [m.record_id for m in a.matches] == [m.record_id for m in b.matches]
 
 
+def test_stemming_matches_word_variants(store, cfg):
+    _seed(store)
+    # "Implement ranked search" / "ranked search" should be found by variants.
+    assert search_memory(store, "p1", "searching", limit=10, cfg=cfg).matches
+    assert search_memory(store, "p1", "ranking results", limit=10, cfg=cfg).matches
+    # A task record titled with "search" is found when querying plural forms.
+    titles = [m.title for m in search_memory(store, "p1", "searches", limit=10, cfg=cfg).matches]
+    assert any("search" in t.lower() for t in titles)
+
+
 def test_no_matches_for_unrelated_query(store, cfg):
     _seed(store)
     result = search_memory(store, "p1", "zebra spaceship", limit=10, cfg=cfg)

@@ -117,6 +117,23 @@ MIGRATIONS: list[str] = [
     CREATE INDEX idx_records_session ON records(session_id, created_at DESC);
     CREATE INDEX idx_summaries_session ON summaries(session_id, created_at DESC);
     """,
+
+    # v7: Rebuild the FTS index with the porter tokenizer so searches match
+    # word variants (task/tasks, decide/decided). Only the FTS shadow is rebuilt;
+    # the records table is untouched.
+    """
+    DROP TRIGGER IF EXISTS records_ai;
+    DROP TABLE IF EXISTS records_fts;
+    CREATE VIRTUAL TABLE records_fts USING fts5(
+        title, body, content='records', content_rowid='id',
+        tokenize='porter unicode61'
+    );
+    CREATE TRIGGER records_ai AFTER INSERT ON records BEGIN
+        INSERT INTO records_fts(rowid, title, body)
+        VALUES (new.id, new.title, new.body);
+    END;
+    INSERT INTO records_fts(records_fts) VALUES('rebuild');
+    """,
 ]
 
 
