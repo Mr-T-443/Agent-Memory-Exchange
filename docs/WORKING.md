@@ -652,7 +652,9 @@ machine). Keys live in `~/.amx/.env`, which the server loads automatically.
 **Search from the terminal:** `amx search "query"` runs the same merged search
 your assistant uses — every local project at once, plus Foundry IQ when
 configured — ranked by relevance with a match percentage per hit. Use
-`--local-only` to skip Foundry IQ or `--limit N` to cap the results.
+`--local-only` to skip Foundry IQ or `--limit N` to cap the results. Matching is
+stemmed (`task` finds `tasks`) and prefix-aware (`auth` finds `authentication`),
+and each hit shows the snippet around the match rather than the start of the record.
 
 ---
 

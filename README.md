@@ -329,7 +329,7 @@ amx foundry-sync      # make the Azure index mirror local memory exactly
 amx local-sync        # restore local memory from the Azure index
 ```
 
-`amx search "query"` runs the same merged search from the terminal: it searches every local project at once and folds in Foundry IQ results when configured, ranked by relevance with a match percentage per hit. Add `--local-only` to skip Foundry IQ, or `--limit N` to cap the results.
+`amx search "query"` runs the same merged search from the terminal: it searches every local project at once and folds in Foundry IQ results when configured, ranked by relevance with a match percentage per hit. Add `--local-only` to skip Foundry IQ, or `--limit N` to cap the results. Search matches word variants (`task` finds `tasks`) and partial words (`auth` finds `authentication`), and each result shows the matched snippet rather than the start of the record.
 
 ## Useful CLI Commands
 
