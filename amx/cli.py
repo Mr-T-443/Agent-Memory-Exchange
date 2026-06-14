@@ -130,14 +130,15 @@ def _search(args) -> int:
     store = Store(cfg.db_path)
     try:
         ranked = rank_records(store.search_records_global(query, cfg.search_limit), query, cfg)
-        hits = [(r.score, "local", r.record.project_id, r.record.title, r.record.body)
+        hits = [(r.score, "local", r.record.project_id, r.record.title,
+                 store.fts_snippet(r.record.id, query) or _search_snippet(r.record.body))
                 for r in ranked]
     finally:
         store.close()
 
     if use_foundry:
         for m in foundry_iq.search(query, cfg):
-            hits.append((m.score, "foundry_iq", "foundry", m.title, m.summary))
+            hits.append((m.score, "foundry_iq", "foundry", m.title, _search_snippet(m.summary)))
 
     hits.sort(key=lambda h: -h[0])
     hits = hits[: args.limit]
@@ -148,12 +149,12 @@ def _search(args) -> int:
         return 0
 
     print(f"{len(hits)} match(es) for {query!r} in {where}:\n")
-    for score, source, project, title, body in hits:
+    for score, source, project, title, snippet in hits:
         pct = max(0.0, min(1.0, score)) * 100
         filled = round(score * 20)
         bar = "#" * filled + "-" * (20 - filled)
         print(f"  [{bar}] {pct:5.1f}%  [{source:<10}] {title}")
-        print(f"  {' ':>28}{project}: {_search_snippet(body)}\n")
+        print(f"  {' ':>28}{project}: {snippet}\n")
     return 0
 
 

@@ -42,6 +42,16 @@ def test_stemming_matches_word_variants(store, cfg):
     assert any("search" in t.lower() for t in titles)
 
 
+def test_snippet_is_query_focused(store, cfg):
+    long_body = ("Intro padding. " * 40) + "The rollback path stalls badly here. " + ("Trailing. " * 40)
+    ingest_record(store, "p1", RecordType.BUG, "OTA failure", long_body)
+    result = search_memory(store, "p1", "rollback", limit=5, cfg=cfg)
+    summary = result.matches[0].summary
+    # The window centres on the match, not the start of the body.
+    assert "rollback" in summary.lower()
+    assert len(summary) < len(long_body)
+
+
 def test_no_matches_for_unrelated_query(store, cfg):
     _seed(store)
     result = search_memory(store, "p1", "zebra spaceship", limit=10, cfg=cfg)

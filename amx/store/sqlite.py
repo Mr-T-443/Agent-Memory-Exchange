@@ -228,6 +228,18 @@ class Store:
         ).fetchall()
         return [(_row_to_record(row), float(row["rank"])) for row in rows]
 
+    # Return the text window around the query match (FTS5 snippet), or "" if none.
+    def fts_snippet(self, record_id: int, query: str, max_tokens: int = 20) -> str:
+        fts = _fts_query(query)
+        if not fts:
+            return ""
+        row = self._conn.execute(
+            f"SELECT snippet(records_fts, -1, '', '', '...', {int(max_tokens)}) AS snip "
+            "FROM records_fts WHERE records_fts MATCH ? AND rowid = ?",
+            (fts, record_id),
+        ).fetchone()
+        return row["snip"].strip() if row and row["snip"] else ""
+
     def recent_records(
         self,
         project_id: str,

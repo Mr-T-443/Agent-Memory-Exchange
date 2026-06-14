@@ -37,7 +37,7 @@ def search_memory(
                 type=record.type.value,
                 title=record.title,
                 score=ranked_record.score,
-                summary=_snippet(record.body),
+                summary=store.fts_snippet(record.id, query) or _snippet(record.body),
                 source="local",
                 record_id=record.id,
             )
