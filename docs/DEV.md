@@ -91,7 +91,7 @@ reconciliation logic stay in one place.
 | `amx/store/migrations.py` | Seven versioned, additive migrations (`db_version 7`). v7 rebuilds the FTS index with the porter tokenizer for stemmed search. |
 | `amx/mcp/server.py` | `create_server(cfg)` builds FastMCP with server instructions and registers tools. `main()` runs stdio. |
 | `amx/adoption.py` | Per-client onboarding (`amx_init`) + the persistent continuity instruction (`INSTRUCTION_VERSION`). |
-| `amx/cli.py` | The `amx` command: `server`, `version`, `info`, `search`, `install-mcp`, `backup`, `restore`, `enable-foundry`, `disable-foundry`, `foundry-sync`, `local-sync`, `update`, `uninstall`, `nukeit`. `search` runs the merged local + Foundry IQ search from the terminal. `update`/`uninstall` detect how AMX was installed — pipx, a dedicated `~/.amx-venv`, or plain pip — and clean up accordingly. |
+| `amx/cli.py` | The `amx` command: `server`, `version`, `info`, `search`, `install-mcp`, `backup`, `restore`, `enable-foundry`, `disable-foundry`, `foundry-sync`, `local-sync`, `update`, `uninstall`, `nukeit`. `search` runs the merged local + Foundry IQ search from the terminal. `update`/`uninstall` detect how AMX was installed — pipx, a dedicated `~/.amx-venv`, or plain pip — and clean up accordingly. On Windows, `uninstall` hands the final `pip uninstall` to a detached child that waits for this process to exit before removing the locked `amx.exe` (a live console-script exe can't delete itself, and pip's non-atomic uninstall would otherwise orphan it). |
 | `amx/clients.py` | Known MCP clients — detection, config-file paths, `install()`/`uninstall()` (surgical, only AMX's own entry), and per-client auto-approve ("trust") for `amx install-mcp`. |
 
 ---

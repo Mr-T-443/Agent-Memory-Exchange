@@ -227,5 +227,12 @@ client config (only its own entry — other servers are left intact) and, for a
 dedicated `~/.amx-venv` install, removes the whole venv too. To unregister from
 clients without removing the package, use `amx install-mcp --remove --all`.
 
+**Windows:** the running `amx.exe` can't delete itself, so the package removal
+finishes a second or two *after* the command exits (a detached helper waits for
+the process to exit, then runs `pip uninstall`). Close any AI clients using AMX
+first — while one is open it holds `amx-server.exe` and the removal can't
+complete. If `amx` still errors afterward, run `python -m pip uninstall amx` from
+a fresh terminal.
+
 **Note:** `amx uninstall` removes the *software*. To wipe *memory* but keep AMX
 installed, use `amx nukeit` instead (it asks for confirmation first).

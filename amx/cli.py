@@ -181,27 +181,41 @@ def _update(args) -> int:
 
 
 # Remove the amx package via pip. On Windows the running amx.exe launcher is
-# locked by this very process, so an in-process `pip uninstall` half-removes the
-# package and then fails (WinError 32). There we hand the removal to a detached
-# child that retries until amx.exe unlocks once this process exits.
+# locked by this very process, and pip uninstall is not atomic: removing it now
+# half-strips the package and orphans amx.exe. So we hand the job to a detached
+# child that waits for this process to exit, then uninstalls exactly once (with
+# the launcher finally unlocked) and clears any leftover amx.exe/amx-server.exe.
 def _pip_uninstall_self() -> int:
     if sys.platform != "win32":
         return subprocess.call([sys.executable, "-m", "pip", "uninstall", "-y", "amx"])
 
+    scripts = os.path.dirname(sys.argv[0]) or os.path.dirname(sys.executable)
     helper = (
-        "import subprocess, sys, time\n"
-        "for _ in range(20):\n"
-        "    if subprocess.call([sys.executable, '-m', 'pip', 'uninstall', '-y', 'amx']) == 0:\n"
-        "        break\n"
-        "    time.sleep(0.5)\n"
+        "import ctypes, os, subprocess, sys\n"
+        "pid, scripts = int(sys.argv[1]), sys.argv[2]\n"
+        "k = ctypes.windll.kernel32\n"
+        "h = k.OpenProcess(0x00100000, False, pid)\n"  # SYNCHRONIZE
+        "if h:\n"
+        "    k.WaitForSingleObject(h, 60000)\n"
+        "    k.CloseHandle(h)\n"
+        "subprocess.call([sys.executable, '-m', 'pip', 'uninstall', '-y', 'amx'])\n"
+        "for n in ('amx.exe', 'amx-server.exe'):\n"
+        "    try:\n"
+        "        os.remove(os.path.join(scripts, n))\n"
+        "    except OSError:\n"
+        "        pass\n"
     )
     flags = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(
         subprocess, "CREATE_NEW_PROCESS_GROUP", 0
     )
-    subprocess.Popen([sys.executable, "-c", helper], creationflags=flags, close_fds=True)
+    subprocess.Popen(
+        [sys.executable, "-c", helper, str(os.getpid()), scripts],
+        creationflags=flags,
+        close_fds=True,
+    )
+    print("Removing the amx package once this command exits...")
     print("Close any AI clients using AMX first - they hold amx-server.exe.")
-    print("Finishing package removal once this process exits...")
-    print("If 'amx' still runs after a few seconds, run: python -m pip uninstall amx")
+    print("If 'amx' still errors after a few seconds, run: python -m pip uninstall amx")
     return 0
 
 
@@ -222,40 +236,40 @@ def _uninstall(args) -> int:
     except Exception:
         pass  # config cleanup is best-effort; continue to remove the package
 
+    # Handle the data directory first, while this process is still alive. On
+    # Windows the package removal below can only finish after we exit, so any
+    # interactive prompt must happen before that hand-off.
+    data_dir = cfg.db_path.parent
+    if data_dir.exists():
+        remove = args.purge or (not args.keep_data and _confirm(
+            f"Delete your memory database at {data_dir}? [y/N] "
+        ))
+        if remove:
+            if cfg.foundry_configured and cfg.foundry_sync_enabled:
+                _clear_foundry_best_effort(cfg)
+            shutil.rmtree(data_dir, ignore_errors=True)
+            if data_dir.exists():
+                print(f"Could not fully delete {data_dir} (files in use). "
+                      "Close any AI clients and remove it manually.")
+            else:
+                print(f"Deleted your memory database at {data_dir}.")
+        else:
+            print(f"Kept your memory database at {data_dir}.")
+
+    # Remove the package itself last.
     venv = _dedicated_venv()
     if venv:
         # Dedicated venv: drop the whole thing rather than just the package.
         _remove_dedicated_venv(venv)
-    elif _pipx_managed():
+        return 0
+    if _pipx_managed():
         pipx = shutil.which("pipx")
         if not pipx:
             print("AMX was installed with pipx, but pipx isn't on PATH.")
             print("Install/locate pipx, then run: pipx uninstall amx")
             return 1
-        code = subprocess.call([pipx, "uninstall", "amx"])
-        if code != 0:
-            return code
-    else:
-        code = _pip_uninstall_self()
-        if code != 0:
-            return code
-
-    data_dir = cfg.db_path.parent
-    if not data_dir.exists():
-        print("Removed amx. No local data directory to clean up.")
-        return 0
-
-    remove = args.purge or (not args.keep_data and _confirm(
-        f"Delete your memory database at {data_dir}? [y/N] "
-    ))
-    if remove:
-        shutil.rmtree(data_dir, ignore_errors=True)
-        print(f"Removed amx and deleted {data_dir}.")
-        if cfg.foundry_configured and cfg.foundry_sync_enabled:
-            _clear_foundry_best_effort(cfg)
-    else:
-        print(f"Removed amx. Kept your data at {data_dir}.")
-    return 0
+        return subprocess.call([pipx, "uninstall", "amx"])
+    return _pip_uninstall_self()
 
 
 # Format a one-line metadata summary for a database file.

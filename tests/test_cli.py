@@ -68,6 +68,7 @@ def test_dedicated_venv_detected_only_from_that_prefix(monkeypatch, tmp_path):
 def test_uninstall_windows_defers_locked_package_removal(monkeypatch, tmp_path, capsys):
     # On Windows the live amx.exe is locked, so pip must NOT run in-process
     # (that half-removes the package). It is handed to a detached child instead.
+    import os
     from pathlib import Path
 
     from amx import cli
@@ -86,7 +87,35 @@ def test_uninstall_windows_defers_locked_package_removal(monkeypatch, tmp_path, 
     assert cli._uninstall(args) == 0
     assert not any("uninstall" in str(c) for c in inline)  # pip never ran inline
     assert len(spawned) == 1  # removal handed to a detached child
+    # The child must WAIT for this process to exit before its single uninstall,
+    # otherwise the still-locked amx.exe half-removes the package (the real bug).
+    child_cmd = " ".join(str(x) for x in spawned[0][0])
+    assert "WaitForSingleObject" in child_cmd
+    assert str(os.getpid()) in child_cmd  # parent pid handed to the child
     assert "python -m pip uninstall amx" in capsys.readouterr().out
+
+
+def test_uninstall_reports_blocked_data_delete(monkeypatch, tmp_path, capsys):
+    # If the db file is locked, rmtree can't remove it. We must say so honestly
+    # instead of claiming the data was deleted (what bit the user on Windows).
+    from pathlib import Path
+
+    from amx import cli
+
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    monkeypatch.setattr(cli, "_dedicated_venv", lambda: None)
+    monkeypatch.setattr(cli, "_pipx_managed", lambda: False)
+    monkeypatch.setattr(cli, "_pip_uninstall_self", lambda: 0)
+    data = tmp_path / ".amx"
+    data.mkdir()
+    (data / "amx.db").write_text("db")
+    monkeypatch.setenv("AMX_DB_PATH", str(data / "amx.db"))
+    monkeypatch.setattr(cli.shutil, "rmtree", lambda *a, **k: None)  # simulate locked
+
+    args = cli.build_parser().parse_args(["uninstall", "--purge"])
+    assert cli._uninstall(args) == 0
+    assert "Could not fully delete" in capsys.readouterr().out
+    assert data.exists()  # data was not actually removed
 
 
 def test_uninstall_non_windows_runs_pip_inline(monkeypatch, tmp_path):

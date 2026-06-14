@@ -733,6 +733,12 @@ that (it points at a binary that no longer exists), reinstall AMX and run
 `amx install-mcp --remove --all`, which surgically removes only AMX's entry and
 leaves your other servers untouched.
 
+**On Windows, `amx` still errors after I uninstalled.** The running `amx.exe`
+can't delete itself, so package removal finishes a moment after the command
+exits. If an AI client was open during uninstall it held `amx-server.exe` and
+blocked the cleanup — close all AI clients, then run `python -m pip uninstall amx`
+from a fresh terminal to remove the leftover launcher.
+
 ---
 
 ## 10. FAQ
