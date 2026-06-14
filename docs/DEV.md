@@ -88,7 +88,7 @@ reconciliation logic stay in one place.
 | `amx/state/project_state.py` | Shallow-merge state patches, each logged as a `raw_event`. |
 | `amx/state/decision_log.py` | Dual-writes a `decisions` row and a searchable record. |
 | `amx/store/sqlite.py` | The only persistence layer; **all SQL lives here**. FTS5 is an external-content table kept in sync by triggers. |
-| `amx/store/migrations.py` | Six versioned, additive migrations (`db_version 6`). |
+| `amx/store/migrations.py` | Seven versioned, additive migrations (`db_version 7`). v7 rebuilds the FTS index with the porter tokenizer for stemmed search. |
 | `amx/mcp/server.py` | `create_server(cfg)` builds FastMCP with server instructions and registers tools. `main()` runs stdio. |
 | `amx/adoption.py` | Per-client onboarding (`amx_init`) + the persistent continuity instruction (`INSTRUCTION_VERSION`). |
 | `amx/cli.py` | The `amx` command: `server`, `version`, `info`, `search`, `install-mcp`, `backup`, `restore`, `enable-foundry`, `disable-foundry`, `foundry-sync`, `local-sync`, `update`, `uninstall`, `nukeit`. `search` runs the merged local + Foundry IQ search from the terminal. `update`/`uninstall` detect how AMX was installed — pipx, a dedicated `~/.amx-venv`, or plain pip — and clean up accordingly. |
@@ -124,7 +124,7 @@ session tables. Notable behaviors:
 
 - `SCHEMA_VERSION = 3` in `schema.py` rides on each record for forward evolution.
 - `MIGRATIONS` in `migrations.py` is an ordered list; the applied version lives in
-  the `meta` table. Current `db_version 6`.
+  the `meta` table. Current `db_version 7`.
 - **Every migration is additive.** New columns start NULL, new tables start empty,
   so an existing database behaves identically until a host opts into the new
   feature. Don't write a destructive or reordering migration — append a new one.
