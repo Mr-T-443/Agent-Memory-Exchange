@@ -65,6 +65,55 @@ def test_dedicated_venv_detected_only_from_that_prefix(monkeypatch, tmp_path):
     assert cli._dedicated_venv() == venv
 
 
+def test_uninstall_windows_defers_locked_package_removal(monkeypatch, tmp_path, capsys):
+    # On Windows the live amx.exe is locked, so pip must NOT run in-process
+    # (that half-removes the package). It is handed to a detached child instead.
+    from pathlib import Path
+
+    from amx import cli
+
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    monkeypatch.setattr(cli, "_dedicated_venv", lambda: None)
+    monkeypatch.setattr(cli, "_pipx_managed", lambda: False)
+    monkeypatch.setattr(cli.sys, "platform", "win32")
+    monkeypatch.setenv("AMX_DB_PATH", str(tmp_path / ".amx" / "amx.db"))  # no data dir
+
+    inline, spawned = [], []
+    monkeypatch.setattr(cli.subprocess, "call", lambda cmd, *a, **k: inline.append(cmd) or 0)
+    monkeypatch.setattr(cli.subprocess, "Popen", lambda *a, **k: spawned.append(a))
+
+    args = cli.build_parser().parse_args(["uninstall", "--keep-data"])
+    assert cli._uninstall(args) == 0
+    assert not any("uninstall" in str(c) for c in inline)  # pip never ran inline
+    assert len(spawned) == 1  # removal handed to a detached child
+    assert "python -m pip uninstall amx" in capsys.readouterr().out
+
+
+def test_uninstall_non_windows_runs_pip_inline(monkeypatch, tmp_path):
+    # Other platforms keep the original in-process uninstall (no self-lock).
+    from pathlib import Path
+
+    from amx import cli
+
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    monkeypatch.setattr(cli, "_dedicated_venv", lambda: None)
+    monkeypatch.setattr(cli, "_pipx_managed", lambda: False)
+    monkeypatch.setattr(cli.sys, "platform", "linux")
+    monkeypatch.setenv("AMX_DB_PATH", str(tmp_path / ".amx" / "amx.db"))
+
+    calls = []
+    monkeypatch.setattr(cli.subprocess, "call", lambda cmd, *a, **k: calls.append(cmd) or 0)
+
+    def _no_spawn(*a, **k):
+        raise AssertionError("should not spawn a detached child off Windows")
+
+    monkeypatch.setattr(cli.subprocess, "Popen", _no_spawn)
+
+    args = cli.build_parser().parse_args(["uninstall", "--keep-data"])
+    assert cli._uninstall(args) == 0
+    assert any("uninstall" in str(c) and "amx" in str(c) for c in calls)
+
+
 def _make_db(path, project_id="p1"):
     from amx.memory.ingest import ingest_record
     from amx.schema import RecordType

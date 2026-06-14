@@ -180,6 +180,31 @@ def _update(args) -> int:
     return 0
 
 
+# Remove the amx package via pip. On Windows the running amx.exe launcher is
+# locked by this very process, so an in-process `pip uninstall` half-removes the
+# package and then fails (WinError 32). There we hand the removal to a detached
+# child that retries until amx.exe unlocks once this process exits.
+def _pip_uninstall_self() -> int:
+    if sys.platform != "win32":
+        return subprocess.call([sys.executable, "-m", "pip", "uninstall", "-y", "amx"])
+
+    helper = (
+        "import subprocess, sys, time\n"
+        "for _ in range(20):\n"
+        "    if subprocess.call([sys.executable, '-m', 'pip', 'uninstall', '-y', 'amx']) == 0:\n"
+        "        break\n"
+        "    time.sleep(0.5)\n"
+    )
+    flags = getattr(subprocess, "DETACHED_PROCESS", 0) | getattr(
+        subprocess, "CREATE_NEW_PROCESS_GROUP", 0
+    )
+    subprocess.Popen([sys.executable, "-c", helper], creationflags=flags, close_fds=True)
+    print("Close any AI clients using AMX first - they hold amx-server.exe.")
+    print("Finishing package removal once this process exits...")
+    print("If 'amx' still runs after a few seconds, run: python -m pip uninstall amx")
+    return 0
+
+
 def _uninstall(args) -> int:
     cfg = AMXConfig()
 
@@ -211,7 +236,7 @@ def _uninstall(args) -> int:
         if code != 0:
             return code
     else:
-        code = subprocess.call([sys.executable, "-m", "pip", "uninstall", "-y", "amx"])
+        code = _pip_uninstall_self()
         if code != 0:
             return code
 
